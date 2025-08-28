@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vib-Thermal Editor</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="static/main.css">
+    <link rel="stylesheet" type="text/css" href="static/drawcanvas.css">
+    <script src="static/drawcanvas.mjs" type="module"></script>
+    <script src="static/np-waveform-canvas.mjs" type="module"></script>
+    <script src="static/main.mjs" type="module"></script>
+</head>
+<body>
+  <div style="position: absolute; top: 10px; right: 20px; text-align: right;">
+    <div style="position: absolute; top: 10px; right: 20px; text-align: right;">
+      <p><strong>Name:</strong> {{ name }}</p>
+      <p><strong>User ID:</strong> {{ user_id }}</p>
+      <p><strong>Trial:</strong> {{ trial }}</p>
+      <p><strong>Gender:</strong> {{ gender }}</p>
+    </div>    
+  </div>
+    <h2 class="trial-num">
+      <div style="display: none;">
+      trial: <span id="trial_current_label">{{ trial }}</span>/
+      
+      <span id="trial_end_label"></span>
+      </div>
+    </h2> 
+        <div class="main-container">
+          <div class="signal-container card">
+            <div class="vibration">
+              <h1>Vibrotactile Feedback</h1>
+
+              <div class="envelope">
+                <h2>Amplitude Envelope:</h2>
+                <div class="canvas-with-axis">
+                  <div class="y-axis-labels">
+                    <span>1</span>
+                    <span>0.5</span>
+                    <span>0</span>
+                  </div>
+                  <draw-canvas id="drawvibaenv" height="100" stroke-color="blue"></draw-canvas>
+                </div>
+              </div>
+
+              <div class="envelope">
+                <h2>Frequency Envelope:</h2>
+                <div class="canvas-with-axis">
+                  <div class="y-axis-labels">
+                    <span>10</span>
+                    <span>5</span>
+                    <span>1</span>
+                  </div>
+                  <draw-canvas id="drawvibfenv" height="100" stroke-color="green"></draw-canvas>
+                </div>
+              </div>
+
+              <div class="envelope">
+                <h2>Final Waveform:</h2>
+                <div class="canvas-with-axis">
+                    <div class="y-axis-labels">
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                    </div>
+                    <div>
+                        <np-waveform-canvas id="vibrationwaveform" height="100"></np-waveform-canvas>
+                    </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="thermal">
+              <h1>Thermal Feedback</h1>
+
+              <div class="envelope">
+                <h2><label for="tempamp">Amplitude Envelope:</label></h2>
+                <div class="canvas-with-axis">
+                  <div class="y-axis-labels">
+                    <span>+6</span>
+                    <span>0</span>
+                    <span>-6</span>
+                  </div>
+                  <draw-canvas id="drawthraenv" height="100" stroke-color="red" no-fill-random initial-y-value="0.5"></draw-canvas>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="envelope">
+                <h2><label for="signalduration">Duration:</label></h2>
+                <div class="slider-wrapper">
+                  <span class="slider-value" id="duration-value">2.5</span>
+                  <input type="range" min="0.5" max="7.0" step="0.1" value="2.5" id="signalduration"
+                    oninput="document.getElementById('duration-value').textContent = this.value" />
+                </div>
+              </div>
+
+
+            <span id="alert_signal_label" class="alertlabel"></span>
+            <span>
+              <div class="button-group">
+                <button class="reset" id="resetsignal">RESET</button>
+                <button class="play" id="playsignal">PLAY</button>
+                <button class="stop" id="stopsignal">STOP</button>
+              </div>
+            </span>
+          </div>
+          </div>
+          <div style="display: none;">
+        <div class="posrate-container">
+            <div class="bodysite">
+                {% include 'body_point_load.html' %}
+            </div>
+            <div class="card ratingcard">
+              <form class="ratings six-grid">
+                <!-- 슬라이더 경고 -->
+                <div class="cell" style="grid-area: alert-slider;">
+                  <span id="alert_slider_label" class="alertlabel">⚠ Please adjust all sliders at least once.</span>
+                </div>
+
+                <!-- 라디오 경고 -->
+                <div class="cell" style="grid-area: alert-radio;">
+                  <span id="alert_referral_label" class="alertlabel">⚠ Please select a referral option</span>
+                </div>
+
+                <!-- Roughness -->
+                <div class="cell" style="grid-area: roughness;">
+                  <h2>Roughness</h2>
+                  <div class="slider-row">
+                    <label class="side-label">0<br>smooth</label>
+                    <div class="slider-wrapper">
+                      <span class="slider-value" id="roughness-value">50</span>
+                      <input type="range" min="0" max="100" value="50" id="roughness"
+                        oninput="document.getElementById('roughness-value').textContent = this.value">
+                    </div>
+                    <label class="side-label">100<br>rough</label>
+                  </div>
+                </div>
+
+                <!-- Referral -->
+                <div class="cell" style="grid-area: referral;">
+                  <h2>Thermal Referral</h2>
+                  <div class="scale-grid">
+                    <label>None<br><input type="radio" name="referral" value="0"></label>
+                    <label>Slight<br><input type="radio" name="referral" value="1"></label>
+                    <label>Moderate<br><input type="radio" name="referral" value="2"></label>
+                    <label>Strong<br><input type="radio" name="referral" value="3"></label>
+                    <label>Very Strong<br><input type="radio" name="referral" value="4"></label>
+                  </div>
+                </div>
+
+
+                <!-- Arousal -->
+                <div class="cell" style="grid-area: arousal;">
+                  <h2>Arousal</h2>
+                  <div class="slider-row">
+                    <label class="side-label">0<br>calm</label>
+                    <div class="slider-wrapper">
+                      <span class="slider-value" id="arousal-value">50</span>
+                      <input type="range" min="0" max="100" value="50" id="arousal"
+                        oninput="document.getElementById('arousal-value').textContent = this.value">
+                    </div>
+                    <label class="side-label">100<br>excited</label>
+                  </div>
+                </div>
+
+                <!-- Masking -->
+                <div class="cell" style="grid-area: masking;">
+                  <h2>Masking</h2>
+                  <div class="scale-grid">
+                    <label>None<br><input type="radio" name="masking" value="0"></label>
+                    <label>Slight<br><input type="radio" name="masking" value="1"></label>
+                    <label>Moderate<br><input type="radio" name="masking" value="2"></label>
+                    <label>Strong<br><input type="radio" name="masking" value="3"></label>
+                    <label>Very Strong<br><input type="radio" name="masking" value="4"></label>
+                  </div>
+                </div>
+
+                <!-- Valence -->
+                <div class="cell" style="grid-area: valence;">
+                  <h2>Valence</h2>
+                  <div class="slider-row">
+                    <label class="side-label">0<br>unpleasant</label>
+                    <div class="slider-wrapper">
+                      <span class="slider-value" id="valence-value">50</span>
+                      <input type="range" min="0" max="100" value="50" id="valence"
+                        oninput="document.getElementById('valence-value').textContent = this.value">
+                    </div>
+                    <label class="side-label">100<br>pleasant</label>
+                  </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="cell" style="grid-area: submit;">
+                  <button id="submit">Submit</button>
+                  <span id="submitstatus" class="alertlabel"></span>
+                </div>
+              </form>
+            </div>
+            </div>
+        </div>
+    </div>
+    <div class="bottom-nav">
+      <h3></h3>
+      </a>
+    </div>
+    </div>
+</body>
+
+
+</html>

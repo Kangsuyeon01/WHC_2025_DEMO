@@ -1,1 +1,1 @@
-# WHC_2025_DEMO
+# vib-thermal

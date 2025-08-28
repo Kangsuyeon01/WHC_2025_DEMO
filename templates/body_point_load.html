@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark a point as Vibration or Thermal.</title>
+    <style>
+    div.body-point-load {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        margin: 0;
+        /* padding: 20px; */
+        text-align: center;
+
+        h2 {
+            margin: 0ex 0ex 0.5ex;
+        }
+
+        .point {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        position: absolute;
+        transform: translate(-50%, -50%);
+        background-color: rgba(128, 128, 128, 0.3);
+        cursor: pointer;
+        }
+
+        .buttons {
+        margin-bottom: 20px;
+        }
+
+        .buttons button {
+        padding: 10px 15px;
+        margin: 0 5px;
+        border: 0;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        }
+        .active {
+        outline: 3px solid yellow;
+        }
+
+        .tooltip {
+        position: absolute;
+        display: none;
+        background: black;
+        color: white;
+        padding: 5px;
+
+        font-size: 12px;
+        z-index: 10;
+        }
+
+        .status-display {
+        margin: 10px 0 30px;
+        font-size: 14px;
+        color: #333;
+        }
+        .hand-label {
+        margin-top: 10px;
+        font-weight: 600;
+        font-size: 20px;
+        color: #222;
+        }
+
+        .hands-wrapper {
+        display: flex;
+        justify-content: center;
+        gap: 60px;
+        margin-top: 20px;
+        }
+
+        .container-hands {
+        position: relative;
+        display: inline-block;
+        text-align: center;
+        }
+
+        .handImage {
+        width: 300px;
+        height: auto;
+        display: block;
+        /* border-radius: 8px; */
+        border-radius: 12px;
+        }
+
+        .label-container {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 8px;
+        margin-bottom: 5px;
+        }
+
+        .front-label {
+        background-color: white;
+        color: black;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 15px;
+        }
+
+        .back-label {
+        background-color: rgba(0, 0, 0);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 15px;
+        border: 0.1px solid #222;
+        }
+    }
+    .status-button-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 20px auto;
+    font-size: 16px;
+    }
+
+    .status-button-bar button {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    }
+
+    #vibrationMode { background-color: #1e90ff; color: white; }
+    #thermalMode { background-color: #ff4d4d; color: white; }
+    #clearMode { background-color: #888; color: white; }
+
+    .status-button-bar span {
+    font-size: 16px;
+    color: #222;
+    }
+
+    </style>
+</head>
+<body>
+<div class="body-point-load">
+
+<h2>Mark a point as Vibration or Thermal.</h2>
+<!-- Display selected Thermal & Vibration information -->
+<div class="status-button-bar">
+    <button id="vibrationMode" onclick="setMode('vibration')">Vibration</button>
+    <span> <span id="vibrationInfo">None</span></span>
+    <button id="thermalMode" onclick="setMode('thermal')">Thermal</button>
+    <span> <span id="thermalInfo">None</span></span>
+    <button id="clearMode" onclick="setMode('none')">Clear</button>
+  </div>
+
+  <span id="alert_body_label" class="alertlabel"></span>
+<div class="hands-wrapper">
+    <!-- Left Hand -->
+    <div class="container-hands" id="leftContainer">
+      <img id="leftHandImage" class="handImage" src="static/src/left_hand.jpg" alt="Left Hand">
+      <div class="label-container">
+        <div class="front-label">Front</div>
+        <div class="back-label">Back</div>
+      </div>
+      <div class="hand-label">Left Hand</div>
+    </div>
+
+    <!-- Right Hand -->
+    <div class="container-hands" id="rightContainer">
+      <img id="rightHandImage" class="handImage" src="static/src/right_hand.jpg" alt="Right Hand">
+      <div class="label-container">
+        <div class="back-label">Back</div>
+        <div class="front-label">Front</div>
+      </div>
+      <div class="hand-label">Right Hand</div>
+    </div>
+  </div>
+<br>
+<!-- <button onclick="sendData()">Save</button> -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+    const leftContainer = document.getElementById("leftContainer");
+    const rightContainer = document.getElementById("rightContainer");
+    const tooltip = document.getElementById("tooltip");
+
+    let fixedPoints = [];
+    let currentMode = "none"; // Current mode ("vibration" or "thermal")
+    let currentThermalIndex = null;
+    let currentVibrationIndex = null;
+
+    // Automatically load JSON data on page load
+    window.onload = function() {
+        fetch("static/src/points.json")
+            .then(response => response.json())
+            .then(data => {
+                fixedPoints = data;
+                loadPoints();
+            })
+            .catch(error => console.error("Error loading JSON:", error));
+    };
+
+    function loadPoints() {
+        document.querySelectorAll(".point").forEach(el => el.remove());
+        fixedPoints.forEach((point, index) => createPointElement(point, index));
+        updateInfo();
+    }
+
+    function createPointElement(point, index) {
+        let container = point.code[0] === "1" ? leftContainer : rightContainer;
+
+        let div = document.createElement("div");
+        div.classList.add("point");
+        div.style.left = `${point.x}px`;
+        div.style.top = `${point.y}px`;
+        div.dataset.index = index;
+        updatePointColor(div, point);
+
+        div.addEventListener("click", function(event) {
+            const clickedIndex = parseInt(div.dataset.index, 10); // Ensure correct index parsing
+            if (!isNaN(clickedIndex)) {
+                applyMode(clickedIndex);
+            }
+        });
+
+        div.addEventListener("mouseover", function(event) {
+            tooltip.style.display = "block";
+            tooltip.style.left = `${event.clientX + 10}px`;
+            tooltip.style.top = `${event.clientY + 10}px`;
+            tooltip.textContent = point.code;
+        });
+
+        div.addEventListener("mouseout", function() {
+            tooltip.style.display = "none";
+        });
+
+        container.appendChild(div);
+    }
+
+    function setMode(mode) {
+    currentMode = mode;
+
+    document.getElementById("vibrationMode").classList.remove("active");
+    document.getElementById("thermalMode").classList.remove("active");
+    document.getElementById("clearMode").classList.remove("active");
+
+    if (mode === "vibration") {
+        document.getElementById("vibrationMode").classList.add("active");
+    } else if (mode === "thermal") {
+        document.getElementById("thermalMode").classList.add("active");
+    } else {
+        document.getElementById("clearMode").classList.add("active");
+
+            //  Reset selected points
+            if (currentVibrationIndex !== null) {
+                fixedPoints[currentVibrationIndex].mode = "none";
+            }
+            if (currentThermalIndex !== null) {
+                fixedPoints[currentThermalIndex].mode = "none";
+            }
+
+            // Clear selection
+            currentVibrationIndex = null;
+            currentThermalIndex = null;
+
+            //Update UI to reflect cleared points
+            updateAllPointColors();
+            updateInfo();
+        }
+    }
+
+
+    function applyMode(index) {
+    let point = fixedPoints[index];
+
+        if (currentMode === "thermal") {
+            if (currentThermalIndex !== null) {
+                fixedPoints[currentThermalIndex].mode = "none"; // Reset previous thermal selection
+            }
+            point.mode = "thermal";
+            currentThermalIndex = index;
+            if (currentVibrationIndex == index) currentVibrationIndex = null; // Clear vibration if same point is selected
+        }
+        else if (currentMode === "vibration") {
+            if (currentVibrationIndex !== null) {
+                fixedPoints[currentVibrationIndex].mode = "none"; // Reset previous vibration selection
+            }
+            point.mode = "vibration";
+            currentVibrationIndex = index;
+            if (currentThermalIndex == index) currentThermalIndex = null; // Clear thermal if same point is selected
+        }
+        else if (currentMode === "none") {
+            //  Clear the previously selected points only if they exist
+            if (currentVibrationIndex !== null) {
+                fixedPoints[currentVibrationIndex].mode = "none";
+            }
+            if (currentThermalIndex !== null) {
+                fixedPoints[currentThermalIndex].mode = "none";
+            }
+
+            //  Reset indices
+            currentVibrationIndex = null;
+            currentThermalIndex = null;
+        }
+
+        updateAllPointColors();
+        updateInfo();
+    }
+
+
+    function updateAllPointColors() {
+        document.querySelectorAll(".point").forEach((div) => {
+            const index = parseInt(div.dataset.index, 10);
+            updatePointColor(div, fixedPoints[index]);
+        });
+    }
+
+    function updatePointColor(div, point) {
+        if (point.mode === "thermal") {
+            div.style.backgroundColor = "red";
+        } else if (point.mode === "vibration") {
+            div.style.backgroundColor = "blue";
+        } else {
+            div.style.backgroundColor = "rgba(128, 128, 128, 0.5)";
+        }
+    }
+
+    function updateInfo() {
+        document.getElementById("thermalInfo").textContent = currentThermalIndex !== null ? fixedPoints[currentThermalIndex].code : "None";
+        document.getElementById("vibrationInfo").textContent = currentVibrationIndex !== null ? fixedPoints[currentVibrationIndex].code : "None";
+    }
+
+    function sendData() {
+        const filteredData = fixedPoints
+            .filter(point => point.mode === "thermal" || point.mode === "vibration")
+            .map(({ x, y, code, mode }) => {
+                return { x, y, code, mode };
+            });
+
+        fetch("/body_point_load", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(filteredData),
+        })
+        .then(response => response.json())
+        .then(data => console.log("Sent data:", data))
+        .catch(error => console.error("Error sending data:", error));
+    }
+</script>
+
+</div>
+</body>
+</html>

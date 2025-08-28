@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Points with Code Display & Interpretation</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #wrapper { display: flex; justify-content: center; gap: 20px; }
+        .container { position: relative; display: inline-block; cursor: crosshair; }
+        .handImage { width: 300px; height: auto; }
+        .point {
+            width: 12px; height: 12px; border-radius: 50%;
+            background-color: green; position: absolute; cursor: pointer;
+            transform: translate(-50%, -50%);
+        }
+        .point-label {
+            position: absolute; font-size: 12px; color: black;
+            background: rgba(255, 255, 255, 0.8); padding: 2px 5px; border-radius: 4px;
+            transform: translate(-50%, -150%);
+        }
+        .tooltip {
+            position: absolute; display: none; background: black;
+            color: white; padding: 5px; border-radius: 5px; font-size: 12px;
+        }
+        .cursor-point {
+            width: 12px; height: 12px; border-radius: 50%;
+            background-color: rgba(0, 255, 0, 0.5);
+            position: absolute; pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        /* Responsive Layout for Info Section */
+        #contentWrapper {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .info-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            text-align: left;
+        }
+
+        .info-box h3 {
+            background-color: #007bff;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .info-box ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .info-box ul li {
+            padding: 5px 0;
+        }
+
+        /* Styling for Code Mapping Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Adjust for smaller screens */
+        @media (max-width: 768px) {
+            #wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+            .info-box {
+                max-width: 100%;
+            }
+            table {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h2>Setup & Load Points</h2>
+    <input type="file" id="fileInput">
+    
+<h2>Click to Add Points (Manual Front/Back Selection & Auto Right Hand)</h2>
+
+<div id="wrapper">
+
+    <div class="container" id="leftContainer">
+        <img id="leftHandImage" class="handImage" src="static/src/left_hand.jpg" alt="Left Hand">
+        <div id="cursorPreviewLeft" class="cursor-point"></div>
+    </div>
+
+    <div class="container" id="rightContainer">
+        <img id="rightHandImage" class="handImage" src="static/src/right_hand.jpg" alt="Right Hand">
+    </div>
+</div>
+
+<button onclick="saveData()">💾 Save JSON</button>
+<pre id="output"></pre>
+
+<div class="tooltip" id="tooltip"></div>
+    <!-- Responsive Layout: Guide and Code Table -->
+    <div id="contentWrapper">
+        <div class="info-box">
+            <h3>How to Use</h3>
+            <ul>
+                <li>🔵 <strong>Click</strong> on the left-hand image to add a point.</li>
+                <li>🔁 Each point is <strong>automatically mirrored</strong> to the right hand.</li>
+                <li>🗑️ <strong>Shift + Click</strong> to delete a point.</li>
+                <li>✏️ <strong>Click on a point</strong> to edit its code.</li>
+                <li>📂 Load a JSON file to resume editing.</li>
+                <li>💾 Save the JSON file when finished.</li>
+            </ul>
+        </div>
+    
+        <div class="info-box">
+            <h3>Code Mapping</h3>
+            <table>
+                <tr>
+                    <th>Code Position</th>
+                    <th>Meaning</th>
+                    <th>Values</th>
+                </tr>
+                <tr>
+                    <td>1st digit</td>
+                    <td>Hand</td>
+                    <td>1 = Left, 2 = Right</td>
+                </tr>
+                <tr>
+                    <td>2nd digit</td>
+                    <td>Front/Back Side</td>
+                    <td>1 = Front, 2 = Back</td>
+                </tr>
+                <tr>
+                    <td>3rd digit</td>
+                    <td>Body Part</td>
+                    <td>0 = Palm, 1 = Thumb, 2 = Index, 3 = Middle, 4 = Ring, 5 = Pinky, 6 = Wrist, 7 = Forearm, 8 = Upper arm</td>
+                </tr>
+                <tr>
+                    <td>4th digit</td>
+                    <td>Segment</td>
+                    <td>1-9</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+<script>
+    const leftContainer = document.getElementById("leftContainer");
+    const rightContainer = document.getElementById("rightContainer");
+    const cursorPreviewLeft = document.getElementById("cursorPreviewLeft");
+    const tooltip = document.getElementById("tooltip");
+
+    let fixedPoints = [];
+
+    const partNames = {
+        "1": "Thumb", "2": "Index", "3": "Middle", "4": "Ring", "5": "Pinky",
+        "0": "Palm", "6": "Wrist", "7": "Forearm", "8": "Upper arm"
+    };
+
+    function interpretCode(code) {
+        const hand = code[0] === "1" ? "Left Hand" : "Right Hand";
+        const side = code[1] === "1" ? "Front" : "Back";
+        const part = partNames[code[2]] || "Unknown";
+        const position = `Position ${code[3]}`;
+        return `${hand} - ${side} - ${part} - ${position}`;
+    }
+
+    // mouse point
+    leftContainer.addEventListener("mousemove", function(event) {
+        const rect = leftContainer.getBoundingClientRect();
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+        cursorPreviewLeft.style.left = `${x}px`;
+        cursorPreviewLeft.style.top = `${y}px`;
+    });
+
+    // create point
+    leftContainer.addEventListener("click", function(event) {
+        if (event.shiftKey) return;
+
+        const rect = leftContainer.getBoundingClientRect();
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+        let mirroredX = rect.width - x; // 오른손 반전 좌표
+
+        let side = prompt("2nd digit: Enter side (Front=1, Back=2):");
+        if (side !== "1" && side !== "2") return;
+
+        let part = prompt("3rd digit: Enter part (Thumb=1, Index=2, Middle=3, Ring=4, Pinky=5, Palm=0, Wrist=6, Forearm=7, Upper arm=8):");
+        if (!part) return;
+
+        let segment = prompt("4th digit: Enter segment number (1-9):");
+        if (!segment || isNaN(segment) || segment < 1 || segment > 9) return;
+
+        const leftCode = `1${side}${part}${segment}`;
+        const rightCode = `2${side}${part}${segment}`;
+
+        let leftPoint = { x, y, code: leftCode, desc: interpretCode(leftCode), mode: "none" };
+        let rightPoint = { x: mirroredX, y, code: rightCode, desc: interpretCode(rightCode), mode: "none" };
+
+        fixedPoints.push(leftPoint, rightPoint);
+        createPointElement(leftPoint, leftContainer, fixedPoints.length - 2);
+        createPointElement(rightPoint, rightContainer, fixedPoints.length - 1);
+    });
+
+    function createPointElement(point, container, index) {
+        let div = document.createElement("div");
+        div.classList.add("point");
+        div.style.left = `${point.x}px`;
+        div.style.top = `${point.y}px`;
+        div.dataset.index = index;
+
+        let label = document.createElement("div");
+        label.classList.add("point-label");
+        label.textContent = point.code;
+
+        div.addEventListener("mouseover", function(event) {
+            tooltip.style.display = "block";
+            tooltip.style.left = `${event.clientX + 10}px`;
+            tooltip.style.top = `${event.clientY + 10}px`;
+            tooltip.textContent = point.desc;
+        });
+
+        div.addEventListener("mouseout", function() {
+            tooltip.style.display = "none";
+        });
+
+        div.addEventListener("click", function(event) {
+            if (event.shiftKey) {
+                deletePoint(this.dataset.index);
+            }
+        });
+
+        div.appendChild(label);
+        container.appendChild(div);
+    }
+
+    function deletePoint(index) {
+        fixedPoints.splice(index, 2);
+        updatePoints();
+    }
+
+    function updatePoints() {
+        document.querySelectorAll(".point, .point-label").forEach(el => el.remove());
+        fixedPoints.forEach((point, index) => {
+            let container = index % 2 === 0 ? leftContainer : rightContainer;
+            createPointElement(point, container, index);
+        });
+    }
+
+    function saveData() {
+        document.getElementById("output").textContent = JSON.stringify(fixedPoints, null, 2);
+        downloadJSON(JSON.stringify(fixedPoints, null, 2), "points.json");
+    }
+
+    function downloadJSON(data, filename) {
+        const blob = new Blob([data], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    }
+        // Handle JSON file selection and load the data
+    document.getElementById("fileInput").addEventListener("change", function(event) {
+        const file = event.target.files[0]; // Get the selected file
+        if (!file) return;
+
+        const reader = new FileReader(); // Create a FileReader to read the file
+        reader.onload = function(event) {
+            try {
+                fixedPoints = JSON.parse(event.target.result); // Parse JSON
+                document.getElementById("output").textContent = JSON.stringify(fixedPoints, null, 2);
+                loadPoints(); // Load the points onto the image
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                alert("Invalid JSON file format!");
+            }
+        };
+        reader.readAsText(file); // Read file as text
+    });
+
+    // Function to load points from JSON and display them
+    function loadPoints() {
+        document.querySelectorAll(".point, .point-label").forEach(el => el.remove());
+        fixedPoints.forEach((point, index) => {
+            let container = point.code[0] === "1" ? leftContainer : rightContainer;
+            createPointElement(point, container, index);
+        });
+    }
+
+</script>
+
+</body>
+</html>

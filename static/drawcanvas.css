@@ -1,0 +1,49 @@
+draw-canvas {
+    overflow: hidden;
+    contain: layout paint style;
+    outline: 1px solid lightgray;
+    cursor: crosshair;
+    display: block;
+    flex-shrink: 0;
+    width: 100%;
+}
+draw-canvas:state(disabled) {
+    /* pointer-events: none; */
+    cursor: not-allowed;
+    opacity: 0.4;
+    background-color: #e9e9e9;
+}
+
+.canvas-with-axis {
+    display: grid;
+    grid-template-columns: 6ex minmax(0px, auto);
+}
+
+.y-axis-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    margin-right: 0.5ex;
+    font-size: 1.24em;
+    color: #555;
+    text-align: right;
+}
+
+.y-axis-labels span {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 2px;
+    box-sizing: border-box;
+}
+
+.y-axis-labels span:first-child {
+    align-items: flex-start;
+}
+
+
+.y-axis-labels span:last-child {
+    align-items: flex-end;
+}
