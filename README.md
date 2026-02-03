@@ -1,4 +1,4 @@
-# SketchTactile — Designing Vibration & Thermal Feedback  
+# SketchTactile — A Web-Based Interface for Interactive Vibrothermal Feedback Design
 **IEEE World Haptics Conference (WHC) 2025 Demo**
 
 ## 🎥 WHC 2025 Demo
